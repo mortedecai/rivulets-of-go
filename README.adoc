@@ -1,0 +1,10 @@
+= Rivulets of Go
+
+The intent of Rivulets of Go (RoG) is to apply the Go programming language to the Multi-User Dungeons (MUDs) of yore.
+
+Hopefully someone, somehwere will make use of this, but if not, it's fun to just relive the past as well.
+
+== Status
+
+_TBD_
+
