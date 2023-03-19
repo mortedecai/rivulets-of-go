@@ -52,7 +52,7 @@ func NewManager(port string, logger *zap.SugaredLogger) (Manager, error) {
 		logger:      logger.Named("rogManager"),
 	}
 
-	mgr.logger.Infow("Creating Port", "Port", port)
+	mgr.logger.Infow("Setting Port", "Port", port)
 	if port[0] == ':' {
 		port = port[1:]
 	}
@@ -68,7 +68,7 @@ func (rm *rogManager) Start() error {
 	var err error
 	rm.terminateMUD = false
 	if rm.listener, err = net.ListenTCP("tcp", rm.address); err != nil {
-		rm.logger.Errorw("Creating Port", "Listen error", err)
+		rm.logger.Errorw("Start Listening", "Listen error", err)
 		rm.terminateMUD = true
 		return err
 	}
@@ -96,23 +96,27 @@ func (rm *rogManager) SetMaintenanceHandler(f HandlerFunc) {
 }
 
 func (rm *rogManager) listen() {
-	rm.logger.Infow("Listening for incoming connections")
+	const (
+		methodName  = "listen()"
+		maintenance = "Maintenance"
+	)
+	rm.logger.Infow(methodName, maintenance, rm.maintenance)
 	var conn net.Conn
 	var err error
 	for {
 		if conn, err = rm.listener.Accept(); err != nil {
-			rm.logger.Errorw("Error accepting connection", "Error", err)
+			rm.logger.Errorw(methodName, "Accept Error", err)
 			continue
 		}
 		if rm.maintenance {
 			rm.maintenanceHandler(&Data{conn})
-			rm.logger.Debugw("Accepted Connection", "Mode", "maintenance", "Remote Address", conn.(*net.TCPConn).RemoteAddr())
+			rm.logger.Debugw(methodName, maintenance, rm.maintenance, "Remote Address", conn.(*net.TCPConn).RemoteAddr())
 			if err = conn.Close(); err != nil {
 				rm.logger.Errorw("Close Connection", "Error", err)
 			}
 		} else {
 			rm.connections = append(rm.connections, &Data{conn})
-			rm.logger.Debugw("Accepted Connection", "Mode", "regular", "Count", len(rm.connections), "Remote Address", conn.(*net.TCPConn).RemoteAddr())
+			rm.logger.Debugw(methodName, maintenance, rm.maintenance, "Count", len(rm.connections), "Remote Address", conn.(*net.TCPConn).RemoteAddr())
 		}
 		if rm.terminateMUD {
 			break

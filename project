@@ -32,7 +32,23 @@ clean() {
 build() {
     prepDirs
 
-    LDFLAGS="-X 'github.com/mortedecai/rivulets-of-go/internal/version.Version=0.0.0-alpha' -X 'github.com/mortedecai/rivulets-of-go/internal/version.Commit=$(git rev-parse --short HEAD)'"
+    ROG_COMMIT_VAR="github.com/mortedecai/rivulets-of-go/server/info.Commit"
+    ROG_NAME_VAR="github.com/mortedecai/rivulets-of-go/server/info.Name"
+    ROG_VERSION_VAR="github.com/mortedecai/rivulets-of-go/server/info.Version"
+
+    if [[ -z ${ROG_NAME} ]]; then
+        ROG_NAME="Rivulets of Go"
+    fi
+
+    if [[ -z ${ROG_VERSION} ]]; then
+        ROG_NAME="0.0.0-alpha"
+    fi
+
+    if [[ -z ${ROG_COMMIT} ]]; then
+        ROG_COMMIT=$(git rev-parse --short HEAD)
+    fi
+
+    LDFLAGS="-X '${ROG_VERSION_VAR}=${ROG_VERSION}' -X '${ROG_COMMIT_VAR}=${ROG_COMMIT}' -X '${ROG_NAME_VAR}=${ROG_NAME}'"
     GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/linux-64 cmd/rog/rog.go
     GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/arm-64 cmd/rog/rog.go
 }

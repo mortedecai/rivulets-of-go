@@ -5,22 +5,23 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/mortedecai/rivulets-of-go/internal/version"
 	"github.com/mortedecai/rivulets-of-go/server/connection"
+	"github.com/mortedecai/rivulets-of-go/server/info"
 )
 
 func printLogWelcome() {
-	fmt.Println("Rivulets of Go")
+	fmt.Println(info.Name)
 	fmt.Println("")
-	fmt.Println("Version: " + version.Version)
-	fmt.Println("Commit:  " + version.Commit)
+	fmt.Println("Version: " + info.Version)
+	fmt.Println("Commit:  " + info.Commit)
 }
 
-func printHelloAndExit(conn *connection.Data) *connection.Data {
-	helloString := fmt.Sprintf("Rivulets of Go\n\r\n\rVersion: %s\n\rCommit: %s\n\r\n\rUnder Construction. Good Bye\n\r\n\r", version.Version, version.Commit)
+func printHello(conn *connection.Data) *connection.Data {
+	helloString := fmt.Sprintf("%s\n\r\n\rVersion: %s\n\rCommit: %s\n\r\n\rUnder Construction. Good Bye\n\r\n\r", info.Name, info.Version, info.Commit)
 	data := []byte(helloString)
 
 	totalBytes := 0
@@ -39,11 +40,13 @@ func printHelloAndExit(conn *connection.Data) *connection.Data {
 const portVal = ":3160"
 
 func main() {
+	const methodName = "main"
 	var logger *zap.SugaredLogger
 	var mgr connection.Manager
 	printLogWelcome()
 
-	if dl, err := zap.NewDevelopment(); err == nil {
+	//if dl, err := zap.NewDevelopment(); err == nil {
+	if dl, err := zap.NewProduction(); err == nil {
 		logger = dl.Sugar().Named("RoG")
 	} else {
 		fmt.Println("")
@@ -54,16 +57,16 @@ func main() {
 		os.Exit(2)
 	}
 
-	logger.Debugw("Creating Connection Manager", "Port", portVal)
+	logger.Debugw(methodName, "Port", portVal)
 
 	if m, err := connection.NewManager(portVal, logger); err != nil {
-		logger.Errorw("Creating Connection Manager", "Error", err)
+		logger.Errorw(methodName, "Manager Error", err)
 	} else {
 		mgr = m
-		logger.Debugw("Connection Manager Created", "Manager", mgr)
+		logger.Debugw(methodName, "Manager", mgr)
 	}
 
-	mgr.SetMaintenanceHandler(printHelloAndExit)
+	mgr.SetMaintenanceHandler(printHello)
 
 	sigs := make(chan os.Signal, 1)
 
@@ -73,15 +76,15 @@ func main() {
 
 	go func() {
 		sig := <-sigs
-		fmt.Println()
-		fmt.Println(sig)
-		fmt.Println()
+		logger.Infow(methodName, "Signal", sig)
 		done <- true
 	}()
 	if err := mgr.MaintenanceStart(); err != nil {
-		logger.Errorw("Manager Start", "Error", err)
+		logger.Errorw(methodName, "Error", err)
 		os.Exit(2)
 	}
+	info.UpDate = time.Now().Local()
+	logger.Infow(methodName, info.Name, "ONLINE", "Time", info.UpDate.Format(time.RFC1123))
 	<-done
 	fmt.Println("exiting")
 }
