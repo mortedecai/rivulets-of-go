@@ -1,0 +1,55 @@
+#!/usr/bin/env zsh
+
+PROJECT_ROOT=`git rev-parse --show-toplevel`
+PROJECT_NAME=`basename "$PROJECT_ROOT"`
+
+usage() {
+    echo "Usage: ./project <command> where <command> is one of:"
+    echo "    * build - Build the project, including tests"
+    echo "    * test  - Test the project."
+    echo "    * clean - Cleans the binary output, docs, etc."
+}
+
+if [[ $# < 1 ]]; then
+    usage
+    exit 1
+fi
+
+prepDirs() {
+    mkdir -p out/{bin,docs}
+    mkdir -p out/bin/{linux,arm}-64/
+}
+
+clean() {
+    rm -fr out/
+    prepDirs
+}
+
+build() {
+    prepDirs
+
+    LDFLAGS="-X 'main.Version=0.0.0-alpha' -X 'main.Commit=$(git rev-parse --short HEAD)'"
+    GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/linux-64 cmd/rog/rog.go
+    GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/arm-64 cmd/rog/rog.go
+}
+
+run() {
+    go run ${PROJECT_ROOT}/cmd/rog/rog.go
+}
+
+case ${1:l} in
+  build)
+    build $*
+    ;;
+  clean)
+    clean
+    ;;
+  run)
+    run
+    ;;
+  *)
+    echo "Unknown command ${1:l}"
+    ;;
+esac
+
+
