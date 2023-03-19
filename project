@@ -43,9 +43,16 @@ run() {
 
 runTests() {
     prepDirs
-    go test -coverprofile=${PROJECT_REPORTS}/coverage.out ./...
-    go tool cover -func=${PROJECT_REPORTS}/coverage.out
-    go tool cover -html=coverage.out -o ${PROJECT_REPORTS}/coverage.html
+
+    if [[ -z ${GITHUB_STEP_SUMMARY} ]]; then
+        go test -covermode=count -coverprofile=${PROJECT_REPORTS}/coverage.out ./...
+        go tool cover -func=${PROJECT_REPORTS}/coverage.out
+    else
+        go test -covermode=count -coverprofile=${PROJECT_REPORTS}/coverage.out ./... > ${GITHUB_STEP_SUMMARY} 2>&1
+        go tool cover -func=${PROJECT_REPORTS}/coverage.out >> ${GITHUB_STEP_SUMMARY} 2>&1
+    fi
+
+    go tool cover -html=${PROJECT_REPORTS}/coverage.out -o ${PROJECT_REPORTS}/coverage.html
 }
 
 shopt -s nocasematch
