@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 PROJECT_ROOT=`git rev-parse --show-toplevel`
 PROJECT_NAME=`basename "$PROJECT_ROOT"`
@@ -48,7 +48,9 @@ runTests() {
     go tool cover -html=coverage.out -o ${PROJECT_REPORTS}/coverage.html
 }
 
-case ${1:l} in
+shopt -s nocasematch
+
+case "${1}" in
   build)
     build $*
     ;;

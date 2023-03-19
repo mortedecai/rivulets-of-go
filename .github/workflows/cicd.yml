@@ -42,8 +42,8 @@ jobs:
             -Dsonar.tests=.
             -Dsonar.test.exclusions=**/vendor/**
             -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.go.coverage.reportPaths=.reports/coverage.out
-            -Dsonar.go.tests.reportPaths=.reports/test.json
+            -Dsonar.go.coverage.reportPaths=out/reports/coverage.out
+            -Dsonar.go.tests.reportPaths=out/reports/test.json
 
       - name: Archive Code Reports
         uses: actions/upload-artifact@v3
