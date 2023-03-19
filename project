@@ -3,8 +3,12 @@
 PROJECT_ROOT=`git rev-parse --show-toplevel`
 PROJECT_NAME=`basename "$PROJECT_ROOT"`
 
+PROJECT_REPORTS=${PROJECT_ROOT}/out/reports
+PROJECT_OUT=${PROJECT_ROOT}/out
+
 usage() {
     echo "Usage: ./project <command> where <command> is one of:"
+    echo "    * run   - Runs the current version from source without building"
     echo "    * build - Build the project, including tests"
     echo "    * test  - Test the project."
     echo "    * clean - Cleans the binary output, docs, etc."
@@ -16,25 +20,32 @@ if [[ $# < 1 ]]; then
 fi
 
 prepDirs() {
-    mkdir -p out/{bin,docs}
-    mkdir -p out/bin/{linux,arm}-64/
+    mkdir -p ${PROJECT_OUT}/{bin,docs,reports}
+    mkdir -p ${PROJECT_OUT}/bin/{linux,arm}-64/
 }
 
 clean() {
-    rm -fr out/
+    rm -fr out/ 
     prepDirs
 }
 
 build() {
     prepDirs
 
-    LDFLAGS="-X 'main.Version=0.0.0-alpha' -X 'main.Commit=$(git rev-parse --short HEAD)'"
+    LDFLAGS="-X 'github.com/mortedecai/rivulets-of-go/internal/version.Version=0.0.0-alpha' -X 'github.com/mortedecai/rivulets-of-go/internal/version.Commit=$(git rev-parse --short HEAD)'"
     GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/linux-64 cmd/rog/rog.go
     GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/arm-64 cmd/rog/rog.go
 }
 
 run() {
     go run ${PROJECT_ROOT}/cmd/rog/rog.go
+}
+
+runTests() {
+    prepDirs
+    go test -coverprofile=${PROJECT_REPORTS}/coverage.out ./...
+    go tool cover -func=${PROJECT_REPORTS}/coverage.out
+    go tool cover -html=coverage.out -o ${PROJECT_REPORTS}/coverage.html
 }
 
 case ${1:l} in
@@ -46,6 +57,9 @@ case ${1:l} in
     ;;
   run)
     run
+    ;;
+  test)
+    runTests
     ;;
   *)
     echo "Unknown command ${1:l}"

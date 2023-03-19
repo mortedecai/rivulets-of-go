@@ -2,26 +2,25 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
-)
 
-var (
-	Version string = "N/A"
-	Commit  string = "N/A"
+	"go.uber.org/zap"
+
+	"github.com/mortedecai/rivulets-of-go/internal/version"
+	"github.com/mortedecai/rivulets-of-go/server/connection"
 )
 
 func printLogWelcome() {
 	fmt.Println("Rivulets of Go")
 	fmt.Println("")
-	fmt.Println("Version: " + Version)
-	fmt.Println("Commit:  " + Commit)
+	fmt.Println("Version: " + version.Version)
+	fmt.Println("Commit:  " + version.Commit)
 }
 
-func printHelloAndExit(conn net.Conn) {
-	helloString := fmt.Sprintf("Rivulets of Go\n\r\n\rVersion: %s\n\rCommit: %s\n\r\n\rUnder Construction. Good Bye\n\r\n\r", Version, Commit)
+func printHelloAndExit(conn *connection.Data) *connection.Data {
+	helloString := fmt.Sprintf("Rivulets of Go\n\r\n\rVersion: %s\n\rCommit: %s\n\r\n\rUnder Construction. Good Bye\n\r\n\r", version.Version, version.Commit)
 	data := []byte(helloString)
 
 	totalBytes := 0
@@ -34,11 +33,37 @@ func printHelloAndExit(conn net.Conn) {
 			fmt.Println("Error writing hello string:  ", err.Error())
 		}
 	}
-	conn.Close()
+	return conn
 }
 
+const portVal = ":3160"
+
 func main() {
+	var logger *zap.SugaredLogger
+	var mgr connection.Manager
 	printLogWelcome()
+
+	if dl, err := zap.NewDevelopment(); err == nil {
+		logger = dl.Sugar().Named("RoG")
+	} else {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("ERROR:  Could not create logger:  ", err.Error(), ".")
+		fmt.Println("")
+		fmt.Println("Terminating.")
+		os.Exit(2)
+	}
+
+	logger.Debugw("Creating Connection Manager", "Port", portVal)
+
+	if m, err := connection.NewManager(portVal, logger); err != nil {
+		logger.Errorw("Creating Connection Manager", "Error", err)
+	} else {
+		mgr = m
+		logger.Debugw("Connection Manager Created", "Manager", mgr)
+	}
+
+	mgr.SetMaintenanceHandler(printHelloAndExit)
 
 	sigs := make(chan os.Signal, 1)
 
@@ -53,34 +78,7 @@ func main() {
 		fmt.Println()
 		done <- true
 	}()
-
-	//portString := ":3160"
-
-	address := net.TCPAddr{Port: 3160}
-
-	listener, err := net.ListenTCP("tcp", &address)
-	if err != nil {
-		fmt.Println("Error creating TCP Listener:  ", err.Error())
-		os.Exit(1)
-	}
-
-	terminateMUD := false
-
-	go func() {
-		for {
-			if conn, err := listener.Accept(); err != nil {
-				fmt.Println("Error accepting connection:  ", err.Error())
-			} else {
-				defer conn.Close()
-				fmt.Println("Accepting connection and printing hello.")
-				printHelloAndExit(conn)
-			}
-			if terminateMUD {
-				break
-			}
-		}
-	}()
-
+	mgr.MaintenanceStart()
 	<-done
 	fmt.Println("exiting")
 }
