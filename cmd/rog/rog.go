@@ -78,7 +78,10 @@ func main() {
 		fmt.Println()
 		done <- true
 	}()
-	mgr.MaintenanceStart()
+	if err := mgr.MaintenanceStart(); err != nil {
+		logger.Errorw("Manager Start", "Error", err)
+		os.Exit(2)
+	}
 	<-done
 	fmt.Println("exiting")
 }

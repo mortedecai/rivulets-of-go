@@ -19,7 +19,7 @@ type HandlerFunc func(data *Data) *Data
 // These include the abilty to Start, Start in Maintenance mode and Stop the listener
 type Manager interface {
 	// MaintenanceStart listens for incoming connections, responds with the maintenance message and closes the connection immediately.
-	MaintenanceStart()
+	MaintenanceStart() error
 	// SetHandler sets the default handler to invoke when not in maintenance mode.
 	SetHandler(f HandlerFunc)
 	// SetMaintenanceHandler sets the handler to use when maintenance mode is turned on.
@@ -77,9 +77,9 @@ func (rm *rogManager) Start() error {
 	return nil
 }
 
-func (rm *rogManager) MaintenanceStart() {
+func (rm *rogManager) MaintenanceStart() error {
 	rm.maintenance = true
-	rm.Start()
+	return rm.Start()
 }
 
 func (rm *rogManager) Stop() {
@@ -106,8 +106,10 @@ func (rm *rogManager) listen() {
 		}
 		if rm.maintenance {
 			rm.maintenanceHandler(&Data{conn})
-			conn.Close()
 			rm.logger.Debugw("Accepted Connection", "Mode", "maintenance", "Remote Address", conn.(*net.TCPConn).RemoteAddr())
+			if err = conn.Close(); err != nil {
+				rm.logger.Errorw("Close Connection", "Error", err)
+			}
 		} else {
 			rm.connections = append(rm.connections, &Data{conn})
 			rm.logger.Debugw("Accepted Connection", "Mode", "regular", "Count", len(rm.connections), "Remote Address", conn.(*net.TCPConn).RemoteAddr())
