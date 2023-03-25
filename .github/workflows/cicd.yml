@@ -1,6 +1,5 @@
 name: RoG CI/CD Build
 on:
-  push:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
