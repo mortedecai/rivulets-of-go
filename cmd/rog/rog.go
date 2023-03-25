@@ -7,8 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"go.uber.org/zap"
-
+	lgr "github.com/mortedecai/rivulets-of-go/logger"
 	"github.com/mortedecai/rivulets-of-go/server/connection"
 	"github.com/mortedecai/rivulets-of-go/server/info"
 )
@@ -41,14 +40,13 @@ const portVal = ":3160"
 
 func main() {
 	const methodName = "main"
-	var logger *zap.SugaredLogger
+	var err error
+	var logger lgr.Logger
 	var mgr connection.Manager
 	printLogWelcome()
 
 	//if dl, err := zap.NewDevelopment(); err == nil {
-	if dl, err := zap.NewProduction(); err == nil {
-		logger = dl.Sugar().Named("RoG")
-	} else {
+	if logger, err = lgr.New("rog", true); err != nil {
 		fmt.Println("")
 		fmt.Println("")
 		fmt.Println("ERROR:  Could not create logger:  ", err.Error(), ".")
@@ -59,12 +57,11 @@ func main() {
 
 	logger.Debugw(methodName, "Port", portVal)
 
-	if m, err := connection.NewManager(portVal, logger); err != nil {
+	if mgr, err = connection.NewManager(portVal, logger); err != nil {
 		logger.Errorw(methodName, "Manager Error", err)
-	} else {
-		mgr = m
-		logger.Debugw(methodName, "Manager", mgr)
+		os.Exit(3)
 	}
+	logger.Debugw(methodName, "Manager", mgr)
 
 	mgr.SetMaintenanceHandler(printHello)
 
@@ -81,7 +78,7 @@ func main() {
 	}()
 	if err := mgr.MaintenanceStart(); err != nil {
 		logger.Errorw(methodName, "Error", err)
-		os.Exit(2)
+		os.Exit(4)
 	}
 	info.UpDate = time.Now().Local()
 	logger.Infow(methodName, info.Name, "ONLINE", "Time", info.UpDate.Format(time.RFC1123))

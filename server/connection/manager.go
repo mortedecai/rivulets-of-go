@@ -1,10 +1,11 @@
 package connection
 
 import (
+	"errors"
 	"net"
 	"strconv"
 
-	"go.uber.org/zap"
+	"github.com/mortedecai/rivulets-of-go/logger"
 )
 
 // Data is the individual RoG data for a particular *net.Conn, including the connection itself.
@@ -33,8 +34,8 @@ type Manager interface {
 type rogManager struct {
 	address      *net.TCPAddr
 	connections  []*Data
-	listener     *net.TCPListener
-	logger       *zap.SugaredLogger
+	listener     net.Listener
+	logger       logger.Logger
 	terminateMUD bool
 	maintenance  bool
 
@@ -44,12 +45,12 @@ type rogManager struct {
 
 // NewManager creates a new connection Manager with an identifying logger name and listening on the provided port
 //     The port may be provided as an integer string (e.g. "3160") or in address specification (e.g. ":3160").
-func NewManager(port string, logger *zap.SugaredLogger) (Manager, error) {
+func NewManager(port string, l logger.Logger) (Manager, error) {
 	var err error
 	mgr := &rogManager{
 		address:     new(net.TCPAddr),
 		connections: make([]*Data, 0),
-		logger:      logger.Named("rogManager"),
+		logger:      l.WithName("mgr"),
 	}
 
 	mgr.logger.Infow("Setting Port", "Port", port)
@@ -85,6 +86,7 @@ func (rm *rogManager) MaintenanceStart() error {
 func (rm *rogManager) Stop() {
 	rm.logger.Infow("Shutting Down")
 	rm.terminateMUD = true
+	rm.listener.Close()
 }
 
 func (rm *rogManager) SetHandler(f HandlerFunc) {
@@ -104,10 +106,18 @@ func (rm *rogManager) listen() {
 	var conn net.Conn
 	var err error
 	for {
-		if conn, err = rm.listener.Accept(); err != nil {
+		if rm.terminateMUD {
+			break
+		}
+		conn, err = rm.listener.Accept()
+		if errors.Is(err, net.ErrClosed) {
+			rm.logger.Infow(methodName, "Listener Status", "Closed")
+			break
+		} else if err != nil {
 			rm.logger.Errorw(methodName, "Accept Error", err)
 			continue
 		}
+
 		if rm.maintenance {
 			rm.maintenanceHandler(&Data{conn})
 			rm.logger.Debugw(methodName, maintenance, rm.maintenance, "Remote Address", conn.(*net.TCPConn).RemoteAddr())
@@ -115,11 +125,10 @@ func (rm *rogManager) listen() {
 				rm.logger.Errorw("Close Connection", "Error", err)
 			}
 		} else {
-			rm.connections = append(rm.connections, &Data{conn})
+			data := &Data{conn}
+			rm.connections = append(rm.connections, data)
 			rm.logger.Debugw(methodName, maintenance, rm.maintenance, "Count", len(rm.connections), "Remote Address", conn.(*net.TCPConn).RemoteAddr())
-		}
-		if rm.terminateMUD {
-			break
+			rm.handler(data)
 		}
 	}
 }
