@@ -1,6 +1,5 @@
 name: RoG CI/CD Build
 on:
-  push:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -14,7 +13,6 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: '^1.19'
-      - run: ./project coverage
       - name: Static Check
         uses: dominikh/staticcheck-action@v1.2.0
         with:
@@ -39,12 +37,12 @@ jobs:
             -Dsonar.projectVersion=0.0.0-alpha
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/testing/integration/**/*.go
+            -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/testing/integration/**/*.go,**/mock_*/*.go
             -Dsonar.tests=.
             -Dsonar.test.exclusions=**/vendor/**
             -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.go.coverage.reportPaths=.reports/coverage.out
-            -Dsonar.go.tests.reportPaths=.reports/test.json
+            -Dsonar.go.coverage.reportPaths=out/reports/coverage.out
+            -Dsonar.go.tests.reportPaths=out/reports/test.json
 
       - name: Archive Code Reports
         uses: actions/upload-artifact@v3

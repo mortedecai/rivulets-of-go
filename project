@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+PROJECT_ROOT=`git rev-parse --show-toplevel`
+PROJECT_NAME=`basename "$PROJECT_ROOT"`
+
+PROJECT_REPORTS=${PROJECT_ROOT}/out/reports
+PROJECT_OUT=${PROJECT_ROOT}/out
+
+usage() {
+    echo "Usage: ./project <command> where <command> is one of:"
+    echo "    * run   - Runs the current version from source without building"
+    echo "    * build - Build the project, including tests"
+    echo "    * test  - Test the project."
+    echo "    * clean - Cleans the binary output, docs, etc."
+}
+
+if [[ $# < 1 ]]; then
+    usage
+    exit 1
+fi
+
+prepDirs() {
+    mkdir -p ${PROJECT_OUT}/{bin,docs,reports}
+    mkdir -p ${PROJECT_OUT}/bin/{linux,arm}-64/
+}
+
+clean() {
+    rm -fr out/ 
+    prepDirs
+}
+
+build() {
+    prepDirs
+
+    ROG_COMMIT_VAR="github.com/mortedecai/rivulets-of-go/server/info.Commit"
+    ROG_NAME_VAR="github.com/mortedecai/rivulets-of-go/server/info.Name"
+    ROG_VERSION_VAR="github.com/mortedecai/rivulets-of-go/server/info.Version"
+
+    if [[ -z ${ROG_NAME} ]]; then
+        ROG_NAME="Rivulets of Go"
+    fi
+
+    if [[ -z ${ROG_VERSION} ]]; then
+        ROG_NAME="0.0.0-alpha"
+    fi
+
+    if [[ -z ${ROG_COMMIT} ]]; then
+        ROG_COMMIT=$(git rev-parse --short HEAD)
+    fi
+
+    LDFLAGS="-X '${ROG_VERSION_VAR}=${ROG_VERSION}' -X '${ROG_COMMIT_VAR}=${ROG_COMMIT}' -X '${ROG_NAME_VAR}=${ROG_NAME}'"
+    GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/linux-64 cmd/rog/rog.go
+    GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o out/bin/arm-64 cmd/rog/rog.go
+}
+
+run() {
+    go run ${PROJECT_ROOT}/cmd/rog/rog.go
+}
+
+runTests() {
+    prepDirs
+
+    if [[ -z ${GITHUB_STEP_SUMMARY} ]]; then
+        go test -covermode=count -coverprofile=${PROJECT_REPORTS}/coverage.out ./...
+        go tool cover -func=${PROJECT_REPORTS}/coverage.out
+    else
+        go test -covermode=count -coverprofile=${PROJECT_REPORTS}/coverage.out ./... > ${GITHUB_STEP_SUMMARY} 2>&1
+        go tool cover -func=${PROJECT_REPORTS}/coverage.out >> ${GITHUB_STEP_SUMMARY} 2>&1
+    fi
+
+    go tool cover -html=${PROJECT_REPORTS}/coverage.out -o ${PROJECT_REPORTS}/coverage.html
+}
+
+shopt -s nocasematch
+
+case "${1}" in
+  build)
+    build $*
+    ;;
+  clean)
+    clean
+    ;;
+  run)
+    run
+    ;;
+  test)
+    runTests
+    ;;
+  *)
+    echo "Unknown command ${1:l}"
+    ;;
+esac
+
+
