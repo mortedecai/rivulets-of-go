@@ -86,7 +86,7 @@ func (rm *rogManager) MaintenanceStart() error {
 func (rm *rogManager) Stop() {
 	rm.logger.Infow("Stop")
 	rm.terminateMUD = true
-	if err := rm.listener.Close() {
+	if err := rm.listener.Close(); err != nil {
 		rm.logger.Errorw("Stop", "Error", err)
 	}
 }
