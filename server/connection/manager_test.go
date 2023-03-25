@@ -54,7 +54,7 @@ var _ = Describe("Manager", func() {
 		BeforeEach(func() {
 			ctrl := gomock.NewController(GinkgoT())
 			l = ml.NewMockLogger(ctrl)
-			l.EXPECT().WithName(gomock.Any()).AnyTimes().DoAndReturn(func(_ string) logger.Logger { return l })
+			l.EXPECT().WithName(gomock.AssignableToTypeOf(mudName)).AnyTimes().DoAndReturn(func(_ string) logger.Logger { return l })
 			l.EXPECT().Debugw(gomock.Any(), gomock.Any()).Times(1)
 			l.EXPECT().Infow(gomock.Any(), gomock.Any()).AnyTimes()
 			l.EXPECT().Errorw(gomock.Any(), gomock.Any()).Times(0)
