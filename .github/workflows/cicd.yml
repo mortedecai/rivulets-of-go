@@ -37,7 +37,7 @@ jobs:
             -Dsonar.projectVersion=0.0.0-alpha
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/testing/integration/**/*.go
+            -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/testing/integration/**/*.go,**/mock_*/*.go
             -Dsonar.tests=.
             -Dsonar.test.exclusions=**/vendor/**
             -Dsonar.test.inclusions=**/*_test.go
