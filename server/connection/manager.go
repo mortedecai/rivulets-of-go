@@ -84,9 +84,11 @@ func (rm *rogManager) MaintenanceStart() error {
 }
 
 func (rm *rogManager) Stop() {
-	rm.logger.Infow("Shutting Down")
+	rm.logger.Infow("Stop")
 	rm.terminateMUD = true
-	rm.listener.Close()
+	if err := rm.listener.Close() {
+		rm.logger.Errorw("Stop", "Error", err)
+	}
 }
 
 func (rm *rogManager) SetHandler(f HandlerFunc) {
